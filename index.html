@@ -8,6 +8,27 @@
             font-family: sans-serif;
             text-align: center;
             margin-top: 50px;
+            transition: background-color 0.3s;
+        }
+
+        body.alert {
+            animation: backgroundFlash 0.7s infinite;
+        }
+
+        @keyframes backgroundFlash {
+            0% {
+                background-color: #ffffff;
+            }
+            50% {
+                background-color: #ffdddd;
+            }
+            100% {
+                background-color: #ffffff;
+            }
+        }
+
+        h1 {
+            margin-bottom: 20px;
         }
 
         button {
@@ -31,22 +52,86 @@
 
         #irStatusBox {
             margin: 30px auto;
-            padding: 25px;
-            width: 300px;
-            border-radius: 15px;
-            font-size: 24px;
+            padding: 30px;
+            width: 360px;
+            min-height: 140px;
+            border-radius: 20px;
+            font-size: 26px;
             font-weight: bold;
             background-color: #eeeeee;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+        }
+
+        #irIcon {
+            font-size: 55px;
+            margin-bottom: 10px;
+        }
+
+        #irMessage {
+            font-size: 28px;
+        }
+
+        #irSubMessage {
+            margin-top: 8px;
+            font-size: 16px;
+            font-weight: normal;
         }
 
         .detected {
-            background-color: #ff9800;
+            background-color: #ff1744;
             color: white;
+            border: 6px solid #b00020;
+            box-shadow: 0 0 30px rgba(255, 23, 68, 0.9);
+            animation: shake 0.35s infinite, pulse 0.8s infinite;
+            transform: scale(1.08);
         }
 
         .none {
             background-color: #2196F3;
             color: white;
+            border: 6px solid #0d47a1;
+            box-shadow: 0 0 15px rgba(33, 150, 243, 0.4);
+        }
+
+        .unknown {
+            background-color: #eeeeee;
+            color: #333333;
+            border: 6px solid #999999;
+        }
+
+        @keyframes shake {
+            0% {
+                transform: translateX(0) scale(1.08);
+            }
+            25% {
+                transform: translateX(-8px) scale(1.08);
+            }
+            50% {
+                transform: translateX(8px) scale(1.08);
+            }
+            75% {
+                transform: translateX(-8px) scale(1.08);
+            }
+            100% {
+                transform: translateX(0) scale(1.08);
+            }
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 10px rgba(255, 23, 68, 0.6);
+            }
+            50% {
+                box-shadow: 0 0 45px rgba(255, 23, 68, 1);
+            }
+            100% {
+                box-shadow: 0 0 10px rgba(255, 23, 68, 0.6);
+            }
         }
     </style>
 </head>
@@ -61,7 +146,12 @@
     <button class="off" onclick="setLED('off')">LED OFF</button>
 
     <h2>적외선 거리감지 센서 상태</h2>
-    <div id="irStatusBox">센서 데이터 확인 중...</div>
+
+    <div id="irStatusBox" class="unknown">
+        <div id="irIcon">⏳</div>
+        <div id="irMessage">센서 데이터 확인 중...</div>
+        <div id="irSubMessage">Firebase에서 데이터를 읽는 중입니다</div>
+    </div>
 
     <script>
         // Firebase Realtime Database URL
@@ -89,22 +179,51 @@
             fetch(irSensorUrl)
             .then(res => res.json())
             .then(data => {
+                const body = document.body;
                 const irStatusBox = document.getElementById("irStatusBox");
+                const irIcon = document.getElementById("irIcon");
+                const irMessage = document.getElementById("irMessage");
+                const irSubMessage = document.getElementById("irSubMessage");
 
                 if (data === "detected") {
-                    irStatusBox.innerText = "🚨 물체 감지";
+                    body.classList.add("alert");
+
                     irStatusBox.className = "detected";
+                    irIcon.innerText = "🚨";
+                    irMessage.innerText = "경고! 물체 감지";
+                    irSubMessage.innerText = "적외선 센서가 물체를 감지했습니다";
+
                 } else if (data === "none") {
-                    irStatusBox.innerText = "✅ 물체 없음";
+                    body.classList.remove("alert");
+
                     irStatusBox.className = "none";
+                    irIcon.innerText = "✅";
+                    irMessage.innerText = "물체 없음";
+                    irSubMessage.innerText = "감지된 물체가 없습니다";
+
                 } else {
-                    irStatusBox.innerText = "⚠️ 알 수 없는 센서 값: " + data;
-                    irStatusBox.className = "";
+                    body.classList.remove("alert");
+
+                    irStatusBox.className = "unknown";
+                    irIcon.innerText = "⚠️";
+                    irMessage.innerText = "알 수 없는 센서 값";
+                    irSubMessage.innerText = "현재 값: " + data;
                 }
             })
             .catch(error => {
                 console.error("센서 데이터 읽기 오류:", error);
-                document.getElementById("irStatusBox").innerText = "센서 데이터 읽기 오류";
+
+                document.body.classList.remove("alert");
+
+                const irStatusBox = document.getElementById("irStatusBox");
+                const irIcon = document.getElementById("irIcon");
+                const irMessage = document.getElementById("irMessage");
+                const irSubMessage = document.getElementById("irSubMessage");
+
+                irStatusBox.className = "unknown";
+                irIcon.innerText = "❌";
+                irMessage.innerText = "센서 데이터 읽기 오류";
+                irSubMessage.innerText = "Firebase 연결 상태를 확인하세요";
             });
         }
 
