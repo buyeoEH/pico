@@ -1,237 +1,87 @@
 <!DOCTYPE html>
-<html>
+<html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>Pico W Remote Control</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>스마트 화분 대시보드</title>
+    <!-- Firebase SDK 불러오기 -->
+    <script src="<https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js>"></script>
+    <script src="<https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js>"></script>
     <style>
-        body {
-            font-family: sans-serif;
-            text-align: center;
-            margin-top: 50px;
-            transition: background-color 0.3s;
-        }
-
-        body.alert {
-            animation: backgroundFlash 0.7s infinite;
-        }
-
-        @keyframes backgroundFlash {
-            0% {
-                background-color: #ffffff;
-            }
-            50% {
-                background-color: #ffdddd;
-            }
-            100% {
-                background-color: #ffffff;
-            }
-        }
-
-        h1 {
-            margin-bottom: 20px;
-        }
-
-        button {
-            padding: 20px 40px;
-            font-size: 20px;
-            cursor: pointer;
-            margin: 10px;
-            border-radius: 10px;
-            border: none;
-        }
-
-        .on {
-            background-color: #4CAF50;
-            color: white;
-        }
-
-        .off {
-            background-color: #f44336;
-            color: white;
-        }
-
-        #irStatusBox {
-            margin: 30px auto;
-            padding: 30px;
-            width: 360px;
-            min-height: 140px;
-            border-radius: 20px;
-            font-size: 26px;
-            font-weight: bold;
-            background-color: #eeeeee;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s ease;
-            box-sizing: border-box;
-        }
-
-        #irIcon {
-            font-size: 55px;
-            margin-bottom: 10px;
-        }
-
-        #irMessage {
-            font-size: 28px;
-        }
-
-        #irSubMessage {
-            margin-top: 8px;
-            font-size: 16px;
-            font-weight: normal;
-        }
-
-        .detected {
-            background-color: #ff1744;
-            color: white;
-            border: 6px solid #b00020;
-            box-shadow: 0 0 30px rgba(255, 23, 68, 0.9);
-            animation: shake 0.35s infinite, pulse 0.8s infinite;
-            transform: scale(1.08);
-        }
-
-        .none {
-            background-color: #2196F3;
-            color: white;
-            border: 6px solid #0d47a1;
-            box-shadow: 0 0 15px rgba(33, 150, 243, 0.4);
-        }
-
-        .unknown {
-            background-color: #eeeeee;
-            color: #333333;
-            border: 6px solid #999999;
-        }
-
-        @keyframes shake {
-            0% {
-                transform: translateX(0) scale(1.08);
-            }
-            25% {
-                transform: translateX(-8px) scale(1.08);
-            }
-            50% {
-                transform: translateX(8px) scale(1.08);
-            }
-            75% {
-                transform: translateX(-8px) scale(1.08);
-            }
-            100% {
-                transform: translateX(0) scale(1.08);
-            }
-        }
-
-        @keyframes pulse {
-            0% {
-                box-shadow: 0 0 10px rgba(255, 23, 68, 0.6);
-            }
-            50% {
-                box-shadow: 0 0 45px rgba(255, 23, 68, 1);
-            }
-            100% {
-                box-shadow: 0 0 10px rgba(255, 23, 68, 0.6);
-            }
-        }
+        /* 기본적인 CSS 스타일 (예쁘게 보이도록) */
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f4; color: #333; }
+        .container { max-width: 800px; margin: 0 auto; background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); }
+        h1 { text-align: center; color: #007bff; }
+        .status-box { border: 1px solid #ddd; padding: 15px; margin-bottom: 20px; border-radius: 5px; background-color: #e9ecef; }
+        .status-box p { margin: 5px 0; }
+        .control-panel button { padding: 10px 20px; margin: 5px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; }
+        .control-panel button.on { background-color: #28a745; color: white; } /* 켜기 버튼 색상 */
+        .control-panel button.off { background-color: #dc3545; color: white; } /* 끄기 버튼 색상 */
     </style>
 </head>
 <body>
-    <h1>Pico W LED Control</h1>
+    <div class="container">
+        <h1>나의 스마트 화분 대시보드</h1>
 
-    <div id="statusText">LED 상태 확인 중...</div>
+        <div class="status-box">
+            <h2>현재 LED 상태</h2>
+            <p>온보드 LED: <span id="led-status-display" style="font-weight: bold;">불러오는 중...</span></p>
+        </div>
 
-    <br>
-
-    <button class="on" onclick="setLED('on')">LED ON</button>
-    <button class="off" onclick="setLED('off')">LED OFF</button>
-
-    <h2>적외선 거리감지 센서 상태</h2>
-
-    <div id="irStatusBox" class="unknown">
-        <div id="irIcon">⏳</div>
-        <div id="irMessage">센서 데이터 확인 중...</div>
-        <div id="irSubMessage">Firebase에서 데이터를 읽는 중입니다</div>
+        <div class="control-panel">
+            <h2>LED 제어</h2>
+            <button class="on" id="led-on-button">LED 켜기</button>
+            <button class="off" id="led-off-button">LED 끄기</button>
+        </div>
     </div>
 
     <script>
-        // Firebase Realtime Database URL
-        const ledUrl = "https://picoproject-54545-default-rtdb.firebaseio.com/led_status.json";
-        const irSensorUrl = "https://picoproject-54545-default-rtdb.firebaseio.com/pico_status/ir_sensor.json";
+        // 🔥 중요: 여기에 Firebase 콘솔에서 복사한 firebaseConfig 코드를 붙여넣으세요!
+        // 예시:
+        const firebaseConfig = {
+          apiKey: "YOUR_API_KEY",
+          authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+          databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
+          projectId: "YOUR_PROJECT_ID",
+          storageBucket: "YOUR_PROJECT_ID.appspot.com",
+          messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+          appId: "YOUR_APP_ID"
+        };
+        // ------------------------------------------------------------------
 
-        // LED 상태 변경
-        function setLED(state) {
-            fetch(ledUrl, {
-                method: "PUT",
-                body: JSON.stringify(state)
-            })
-            .then(res => res.json())
-            .then(data => {
-                document.getElementById("statusText").innerText = "LED 상태: " + data;
-            })
-            .catch(error => {
-                console.error("LED 제어 오류:", error);
-                document.getElementById("statusText").innerText = "LED 제어 오류 발생";
-            });
-        }
+        // Firebase 초기화 및 Realtime Database 객체 얻기
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
 
-        // 적외선 센서 상태 읽기
-        function getIRSensorStatus() {
-            fetch(irSensorUrl)
-            .then(res => res.json())
-            .then(data => {
-                const body = document.body;
-                const irStatusBox = document.getElementById("irStatusBox");
-                const irIcon = document.getElementById("irIcon");
-                const irMessage = document.getElementById("irMessage");
-                const irSubMessage = document.getElementById("irSubMessage");
+        // HTML 요소 가져오기
+        const ledStatusDisplay = document.getElementById('led-status-display');
+        const ledOnButton = document.getElementById('led-on-button');
+        const ledOffButton = document.getElementById('led-off-button');
 
-                if (data === "detected") {
-                    body.classList.add("alert");
+        // 1. Firebase에서 'led_status' 값 실시간으로 읽어와서 웹 페이지 업데이트
+        database.ref('led_status').on('value', (snapshot) => {
+            const status = snapshot.val(); // Firebase에서 현재 led_status 값 가져오기
+            if (status) {
+                ledStatusDisplay.innerText = status.toUpperCase(); // 웹 페이지에 표시 (대문자로)
+                console.log("Firebase에서 LED 상태 업데이트 받음:", status);
+            } else {
+                ledStatusDisplay.innerText = "상태 없음";
+            }
+        });
 
-                    irStatusBox.className = "detected";
-                    irIcon.innerText = "🚨";
-                    irMessage.innerText = "경고! 물체 감지";
-                    irSubMessage.innerText = "적외선 센서가 물체를 감지했습니다";
+        // 2. 'LED 켜기' 버튼 클릭 시 Firebase에 'on' 값 쓰기
+        ledOnButton.addEventListener('click', () => {
+            database.ref('led_status').set('on')
+                .then(() => { console.log("Firebase에 'on' 명령 전송 성공"); })
+                .catch((error) => { console.error("Firebase에 'on' 명령 전송 실패:", error); });
+        });
 
-                } else if (data === "none") {
-                    body.classList.remove("alert");
-
-                    irStatusBox.className = "none";
-                    irIcon.innerText = "✅";
-                    irMessage.innerText = "물체 없음";
-                    irSubMessage.innerText = "감지된 물체가 없습니다";
-
-                } else {
-                    body.classList.remove("alert");
-
-                    irStatusBox.className = "unknown";
-                    irIcon.innerText = "⚠️";
-                    irMessage.innerText = "알 수 없는 센서 값";
-                    irSubMessage.innerText = "현재 값: " + data;
-                }
-            })
-            .catch(error => {
-                console.error("센서 데이터 읽기 오류:", error);
-
-                document.body.classList.remove("alert");
-
-                const irStatusBox = document.getElementById("irStatusBox");
-                const irIcon = document.getElementById("irIcon");
-                const irMessage = document.getElementById("irMessage");
-                const irSubMessage = document.getElementById("irSubMessage");
-
-                irStatusBox.className = "unknown";
-                irIcon.innerText = "❌";
-                irMessage.innerText = "센서 데이터 읽기 오류";
-                irSubMessage.innerText = "Firebase 연결 상태를 확인하세요";
-            });
-        }
-
-        // 페이지가 열리면 바로 센서 상태 확인
-        getIRSensorStatus();
-
-        // 1초마다 Firebase에서 센서 상태 다시 읽기
-        setInterval(getIRSensorStatus, 1000);
+        // 3. 'LED 끄기' 버튼 클릭 시 Firebase에 'off' 값 쓰기
+        ledOffButton.addEventListener('click', () => {
+            database.ref('led_status').set('off')
+                .then(() => { console.log("Firebase에 'off' 명령 전송 성공"); })
+                .catch((error) => { console.error("Firebase에 'off' 명령 전송 실패:", error); });
+        });
     </script>
 </body>
 </html>
