@@ -4,33 +4,115 @@
     <meta charset="UTF-8">
     <title>Pico W Remote Control</title>
     <style>
-        body { font-family: sans-serif; text-align: center; margin-top: 50px; }
-        button { padding: 20px 40px; font-size: 20px; cursor: pointer; margin: 10px; border-radius: 10px; border: none; }
-        .on { background-color: #4CAF50; color: white; }
-        .off { background-color: #f44336; color: white; }
+        body {
+            font-family: sans-serif;
+            text-align: center;
+            margin-top: 50px;
+        }
+
+        button {
+            padding: 20px 40px;
+            font-size: 20px;
+            cursor: pointer;
+            margin: 10px;
+            border-radius: 10px;
+            border: none;
+        }
+
+        .on {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .off {
+            background-color: #f44336;
+            color: white;
+        }
+
+        #irStatusBox {
+            margin: 30px auto;
+            padding: 25px;
+            width: 300px;
+            border-radius: 15px;
+            font-size: 24px;
+            font-weight: bold;
+            background-color: #eeeeee;
+        }
+
+        .detected {
+            background-color: #ff9800;
+            color: white;
+        }
+
+        .none {
+            background-color: #2196F3;
+            color: white;
+        }
     </style>
 </head>
 <body>
     <h1>Pico W LED Control</h1>
-    <div id="statusText">데이터 확인 중...</div>
+
+    <div id="statusText">LED 상태 확인 중...</div>
+
     <br>
-    <button class="on" onclick="setLED('ON')">LED ON</button>
-    <button class="off" onclick="setLED('OFF')">LED OFF</button>
+
+    <button class="on" onclick="setLED('on')">LED ON</button>
+    <button class="off" onclick="setLED('off')">LED OFF</button>
+
+    <h2>적외선 거리감지 센서 상태</h2>
+    <div id="irStatusBox">센서 데이터 확인 중...</div>
 
     <script>
-        // 본인의 Firebase URL로 교체 (끝에 /ledStatus.json 을 붙여야 합니다)
-        const dbUrl = "https://picoproject-54545-default-rtdb.firebaseio.com/led_status.json";
+        // Firebase Realtime Database URL
+        const ledUrl = "https://picoproject-54545-default-rtdb.firebaseio.com/led_status.json";
+        const irSensorUrl = "https://picoproject-54545-default-rtdb.firebaseio.com/pico_status/ir_sensor.json";
 
+        // LED 상태 변경
         function setLED(state) {
-            fetch(dbUrl, {
-                method: 'PUT',
+            fetch(ledUrl, {
+                method: "PUT",
                 body: JSON.stringify(state)
             })
             .then(res => res.json())
             .then(data => {
-                document.getElementById('statusText').innerText = "상태: " + data;
+                document.getElementById("statusText").innerText = "LED 상태: " + data;
+            })
+            .catch(error => {
+                console.error("LED 제어 오류:", error);
+                document.getElementById("statusText").innerText = "LED 제어 오류 발생";
             });
         }
+
+        // 적외선 센서 상태 읽기
+        function getIRSensorStatus() {
+            fetch(irSensorUrl)
+            .then(res => res.json())
+            .then(data => {
+                const irStatusBox = document.getElementById("irStatusBox");
+
+                if (data === "detected") {
+                    irStatusBox.innerText = "🚨 물체 감지";
+                    irStatusBox.className = "detected";
+                } else if (data === "none") {
+                    irStatusBox.innerText = "✅ 물체 없음";
+                    irStatusBox.className = "none";
+                } else {
+                    irStatusBox.innerText = "⚠️ 알 수 없는 센서 값: " + data;
+                    irStatusBox.className = "";
+                }
+            })
+            .catch(error => {
+                console.error("센서 데이터 읽기 오류:", error);
+                document.getElementById("irStatusBox").innerText = "센서 데이터 읽기 오류";
+            });
+        }
+
+        // 페이지가 열리면 바로 센서 상태 확인
+        getIRSensorStatus();
+
+        // 1초마다 Firebase에서 센서 상태 다시 읽기
+        setInterval(getIRSensorStatus, 1000);
     </script>
 </body>
 </html>
